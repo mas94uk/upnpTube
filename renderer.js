@@ -114,7 +114,7 @@ class Renderer extends Ytcr.Player {
                 obj.httpServer.listen(proxyPort);
                 const localUrl = `http://${hostname}:${proxyPort}`;
         
-                // Play the URL on the renderer
+                // Load and play the URL on the renderer
                 const options = { autoplay: true,
                                   contentType: 'audio/mp4' };
                 obj.client.load(localUrl, options, function(err, result) {
@@ -123,19 +123,9 @@ class Renderer extends Ytcr.Player {
                         console.log(err);
                     }
                     else {
-                        // await obj.notifyPlayed();
-                        obj.client.play(function(err, result) {
-                            if(err) {
-                                console.log(`[${obj.friendlyName}]: Error playing:`)
-                                console.log(err);
-                            } else {
-                                console.log(`[${obj.friendlyName}]: Playing`);
-                                obj.notifyPlayed();
-                            }
-                        });
+                        obj.notifyPlayed();
                     }
                 });
-         
             }
         });
     }
@@ -214,8 +204,22 @@ class Renderer extends Ytcr.Player {
 
     async getVolume() {
         console.log(`[${this.friendlyName}]: getVolume`);
-        // TODO Implement -- not sure how to wait for the result
-        return 50;
+        const obj = this;
+
+        const promise = new Promise(function(resolve, reject) {
+            obj.client.getVolume(function(err, result) {
+                if(err) {
+                    console.log(`[${obj.friendlyName}]: getVolume error:`);
+                    console.log(err);
+                    reject(err);
+                } else {
+                    console.log(`[${obj.friendlyName}]: getVolume ${result}`);
+                    resolve(result);
+                }
+            })
+        });
+
+        return promise;
     }
 
     async setVolume(volume) {
@@ -238,14 +242,44 @@ class Renderer extends Ytcr.Player {
 
     async getPosition() {
         console.log(`[${this.friendlyName}]: getPosition`);
-        // TODO Implement -- not sure how to wait for the result
-        return 123;
+
+        const obj = this;
+
+        const promise = new Promise(function(resolve, reject) {
+            obj.client.getPosition(function(err, result) {
+                if(err) {
+                    console.log(`[${obj.friendlyName}]: getPosition error:`);
+                    console.log(err);
+                    reject(err);
+                } else {
+                    console.log(`[${obj.friendlyName}]: getPosition ${result}`);
+                    resolve(result);
+                }
+            })
+        });
+
+        return promise;
     }
 
     async getDuration() {
         console.log(`[${this.friendlyName}]: getDuration`);
-        // TODO Implement -- not sure how to wait for the result
-        return 456;
+
+        const obj = this;
+
+        const promise = new Promise(function(resolve, reject) {
+            obj.client.getDuration(function(err, result) {
+                if(err) {
+                    console.log(`[${obj.friendlyName}]: getDuration error:`);
+                    console.log(err);
+                    reject(err);
+                } else {
+                    console.log(`[${obj.friendlyName}]: getDuration ${result}`);
+                    resolve(result);
+                }
+            })
+        });
+
+        return promise;
     }
 
 }
