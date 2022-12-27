@@ -1,6 +1,6 @@
 const { Console } = require('console');
 const MediaRendererClient = require('upnp-mediarenderer-client');
-const { execSync } = require('child_process');
+const { exec } = require('child_process');
 const http = require('http');
 const request = require('request');
 const os = require('os');
@@ -10,6 +10,9 @@ const Ytcr = require('../yt-cast-receiver_mas94');
 
 // Use ports 3000, 3001, 3002 etc for successive YTCRs
 const YTCR_BASE_PORT = 3000;
+
+// Use port 800n for the HTTPS->HTTP proxying of the media
+const PROXY_BASE_PORT = 8000;
 
 /**
  * Class controlling a single upnp media renderer.
@@ -85,46 +88,54 @@ class Renderer extends Ytcr.Player {
         const obj = this;
 
         // Call youtube-dl to get the audio URL
-        // TODO Is it OK to call execSync here (in an async function)? Or does it block everything else?
-        const stdout = execSync(`youtube-dl -f bestaudio[ext=m4a] --get-url ${videoId}`);
-        const audioUrl = stdout.toString().trim();
-        console.log(`[${obj.friendlyName}]: Media URL: ${audioUrl}`);
-
-        // Stop the old http server, if there was one
-        if(this.httpServer) {
-            this.httpServer.close();
-        }
-
-        // Create an HTTP server which will proxy the media, which will (likely) be HTTPS
-        this.httpServer = http.createServer(function (req, res) {
-            console.log(`[${obj.friendlyName}]: HTTP connection received from ${req.socket.remoteAddress}`);
-            req.pipe(request(audioUrl)).pipe(res);
-        });
-        const hostname = os.hostname();
-        const proxyPort = 8000 + this.index;
-        this.httpServer.listen(proxyPort);
-        const localUrl = `http://${hostname}:${proxyPort}`;
-
-        // Play the URL on the renderer
-        const options = { autoplay: true,
-                    contentType: 'audio/mp4' };
-        console.log(localUrl);
-        this.client.load(localUrl, options, function(err, result) {
+        const stdout = exec(`youtube-dl -f bestaudio[ext=m4a] --get-url ${videoId}`, function(err, stdout, stderr) {
             if(err) {
-                console.log(`[${obj.friendlyName}]: Error loading media:`)
+                console.log(`[${obj.friendlyName}]: Error getting URL from youtube-dl:`);
                 console.log(err);
-            }
-            else {
-                // await obj.notifyPlayed();
-                obj.client.play(function(err, result) {
+                if(stdout) {
+                    console.log(stdout);
+                }
+            } else {
+                const audioUrl = stdout.toString().trim();
+                console.log(`[${obj.friendlyName}]: Media URL: ${audioUrl}`);
+        
+                // Stop the old http server, if there was one
+                if(obj.httpServer) {
+                    obj.httpServer.close();
+                }
+        
+                // Create an HTTP server which will proxy the media, which will (likely) be HTTPS
+                obj.httpServer = http.createServer(function (req, res) {
+                    console.log(`[${obj.friendlyName}]: HTTP connection received from ${req.socket.remoteAddress}`);
+                    req.pipe(request(audioUrl)).pipe(res);
+                });
+                const hostname = os.hostname();
+                const proxyPort = PROXY_BASE_PORT + obj.index;
+                obj.httpServer.listen(proxyPort);
+                const localUrl = `http://${hostname}:${proxyPort}`;
+        
+                // Play the URL on the renderer
+                const options = { autoplay: true,
+                                  contentType: 'audio/mp4' };
+                obj.client.load(localUrl, options, function(err, result) {
                     if(err) {
-                        console.log(`[${obj.friendlyName}]: Error playing:`)
+                        console.log(`[${obj.friendlyName}]: Error loading media:`)
                         console.log(err);
-                    } else {
-                        console.log(`[${obj.friendlyName}]: Playing`);
-                        obj.notifyPlayed();
+                    }
+                    else {
+                        // await obj.notifyPlayed();
+                        obj.client.play(function(err, result) {
+                            if(err) {
+                                console.log(`[${obj.friendlyName}]: Error playing:`)
+                                console.log(err);
+                            } else {
+                                console.log(`[${obj.friendlyName}]: Playing`);
+                                obj.notifyPlayed();
+                            }
+                        });
                     }
                 });
+         
             }
         });
     }
