@@ -55,6 +55,7 @@ function start_ssdp_discovery() {
 function pruneRenderers() {
     var pruned = false;
     do {
+        pruned = false;
         for(let i=0 ; i<renderers.length ; ++i) {
             const renderer = renderers[i];
 

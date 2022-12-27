@@ -1,5 +1,9 @@
 const { Console } = require('console');
 const MediaRendererClient = require('upnp-mediarenderer-client');
+const { execSync } = require('child_process');
+const http = require('http');
+const request = require('request');
+const os = require('os');
 
 // TODO: Ideally the author will accept the pull request and re-publish. Otherwise tie it to my fork.
 const Ytcr = require('../yt-cast-receiver_mas94');
@@ -22,6 +26,7 @@ class Renderer extends Ytcr.Player {
         console.log("Creating new renderer: " + location);
         this.location = location;
         this.index = index;
+        this.httpServer = null;
         this.refresh();
 
         // Instantiate the mediarender client
@@ -33,8 +38,8 @@ class Renderer extends Ytcr.Player {
         // Get device details
         const obj = this;
         this.client.getDeviceDescription(function(err, description) {
-            if(err) {
-                console.log("Failed to get device description from " + this.location);
+            if (err) {
+                console.log("Failed to get device description from " + obj.location);
                 return;
             }
 
@@ -44,7 +49,7 @@ class Renderer extends Ytcr.Player {
             const manufacturer = description.manufacturer;
             const modelName = description.modelName;
             obj.friendlyName = friendlyName + " (" + manufacturer + " " + modelName + ")";
-            console.log(obj.friendlyName);
+            console.log(`[${obj.friendlyName}]: New renderer created`);
 
             // Create a youtube cast receiver
             const options = {port: YTCR_BASE_PORT + obj.index,
@@ -77,55 +82,103 @@ class Renderer extends Ytcr.Player {
      */
     async play(videoId, position = 0) {
         console.log(`[${this.friendlyName}]: Play ${videoId} at position ${position}s`);
-        // TODO Implement
-        await this.notifyPlayed();
+        const obj = this;
+
+        // Call youtube-dl to get the audio URL
+        // TODO Is it OK to call execSync here (in an async function)? Or does it block everything else?
+        const stdout = execSync(`youtube-dl -f bestaudio[ext=m4a] --get-url ${videoId}`);
+        const audioUrl = stdout.toString().trim();
+        console.log(`[${obj.friendlyName}]: Media URL: ${audioUrl}`);
+
+        // Stop the old http server, if there was one
+        if(this.httpServer) {
+            this.httpServer.close();
+        }
+
+        // Create an HTTP server which will proxy the media, which will (likely) be HTTPS
+        this.httpServer = http.createServer(function (req, res) {
+            console.log(`[${obj.friendlyName}]: HTTP connection received from ${req.socket.remoteAddress}`);
+            req.pipe(request(audioUrl)).pipe(res);
+        });
+        const hostname = os.hostname();
+        const proxyPort = 8000 + this.index;
+        this.httpServer.listen(proxyPort);
+        const localUrl = `http://${hostname}:${proxyPort}`;
+
+        // Play the URL on the renderer
+        const options = { autoplay: true,
+                    contentType: 'audio/mp4' };
+        console.log(localUrl);
+        this.client.load(localUrl, options, function(err, result) {
+            if(err) {
+                console.log(`[${obj.friendlyName}]: Error loading media:`)
+                console.log(err);
+            }
+            else {
+                // await obj.notifyPlayed();
+                obj.client.play(function(err, result) {
+                    if(err) {
+                        console.log(`[${obj.friendlyName}]: Error playing:`)
+                        console.log(err);
+                    } else {
+                        console.log(`[${obj.friendlyName}]: Playing`);
+                        obj.notifyPlayed();
+                    }
+                });
+            }
+        });
     }
 
     async pause() {
         console.log(`[${this.friendlyName}]: Pause`);
-        // TODO Implement
+        // TODO This should probably be async: callback from pause() calls notifyPaused()
+        this.client.pause();
         await this.notifyPaused();
     }
 
     async resume() {
         console.log(`[${this.friendlyName}]: Resume`);
-        // TODO Implement
+        // TODO This should probably be async: callback from resume() calls notifyResumed()
+        this.client.play();
         await this.notifyResumed();
     }
 
     async stop() {
         console.log(`[${this.friendlyName}]: Stop`);
-        // TODO Implement
+        // TODO This should probably be async: callback from pause() calls notifyPaused()
+        this.client.stop();
         await this.notifyStopped();
     }
 
     async seek(position, statusBeforeSeek) {
-        console.log(`[${this.friendlyName}]: Seek to ${position}s`);
-        // TODO Implement
+        console.log(`[${this.friendlyName}]: Seek to ${position}s, statusBeforeSeek ${statusBeforeSeek}`);
+        // TODO This should probably be async: callback from seek() calls notifySeeked()
+        this.client.seek(position);
         await this.notifySeeked(statusBeforeSeek);
     }
 
     async getVolume() {
         console.log(`[${this.friendlyName}]: getVolume`);
-        // TODO Implement
+        // TODO Implement -- not sure how to wait for the result
         return 50;
     }
 
     async setVolume(volume) {
         console.log(`[${this.friendlyName}]: setVolume to ${volume}`);
-        // TODO Implement
+        // TODO This should probably be async: callback from setVolue() calls notifyVolumeChanged()
+        this.client.setVolume(volume);
         await this.notifyVolumeChanged();
     }
 
     async getPosition() {
         console.log(`[${this.friendlyName}]: getPosition`);
-        // TODO Implement
+        // TODO Implement -- not sure how to wait for the result
         return 123;
     }
 
     async getDuration() {
         console.log(`[${this.friendlyName}]: getDuration`);
-        // TODO Implement
+        // TODO Implement -- not sure how to wait for the result
         return 456;
     }
 
