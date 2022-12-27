@@ -131,30 +131,74 @@ class Renderer extends Ytcr.Player {
 
     async pause() {
         console.log(`[${this.friendlyName}]: Pause`);
-        // TODO This should probably be async: callback from pause() calls notifyPaused()
-        this.client.pause();
-        await this.notifyPaused();
+        const obj = this;
+
+        // Pause the dlna renderer
+        this.client.pause(function(err, result) {
+            if (err) {
+                console.log(`[${obj.friendlyName}]: Pause error:`);
+                console.log(err);
+            } else {
+                console.log(`[${obj.friendlyName}]: Paused`);
+
+                // Notify YouTube that we have paused
+                obj.notifyPaused();
+            }
+        });
     }
 
     async resume() {
         console.log(`[${this.friendlyName}]: Resume`);
-        // TODO This should probably be async: callback from resume() calls notifyResumed()
-        this.client.play();
-        await this.notifyResumed();
+        const obj = this;
+
+        // Play (=resume) the dlna renderer
+        this.client.play(function(err, result) {
+            if (err) {
+                console.log(`[${obj.friendlyName}]: Resume error:`);
+                console.log(err);
+            } else {
+                console.log(`[${obj.friendlyName}]: Resumed`);
+
+                // Notify YouTube that we have resumed
+                obj.notifyResumed();
+            }
+        });
     }
 
     async stop() {
         console.log(`[${this.friendlyName}]: Stop`);
-        // TODO This should probably be async: callback from pause() calls notifyPaused()
-        this.client.stop();
-        await this.notifyStopped();
+        const obj = this;
+        
+        // Stop the dlna renderer
+        this.client.stop(function(err, result) {
+            if (err) {
+                console.log(`[${obj.friendlyName}]: Stop error:`);
+                console.log(err);
+            } else {
+                console.log(`[${obj.friendlyName}]: Stopped`);
+
+                // Notify YouTube that we have stopped
+                obj.notifyStopped();
+            }
+        });
     }
 
     async seek(position, statusBeforeSeek) {
         console.log(`[${this.friendlyName}]: Seek to ${position}s, statusBeforeSeek ${statusBeforeSeek}`);
-        // TODO This should probably be async: callback from seek() calls notifySeeked()
-        this.client.seek(position);
-        await this.notifySeeked(statusBeforeSeek);
+        const obj = this;
+
+        // Tell the dlna renderer to seek
+        this.client.seek(position, function(err, result) {
+            if (err) {
+                console.log(`[${obj.friendlyName}]: Seek error:`);
+                console.log(err);
+            } else {
+                console.log(`[${obj.friendlyName}]: Seeked`);
+
+                // Notify YouTube that we have stopped
+                obj.notifySeeked(statusBeforeSeek);
+            }
+        });
     }
 
     async getVolume() {
@@ -165,9 +209,20 @@ class Renderer extends Ytcr.Player {
 
     async setVolume(volume) {
         console.log(`[${this.friendlyName}]: setVolume to ${volume}`);
-        // TODO This should probably be async: callback from setVolue() calls notifyVolumeChanged()
-        this.client.setVolume(volume);
-        await this.notifyVolumeChanged();
+        const obj = this;
+
+        // Set the volume on the dlna renderer
+        this.client.setVolume(volume, function(err, result) {
+            if (err) {
+                console.log(`[${obj.friendlyName}]: setVolume error:`);
+                console.log(err);
+            } else {
+                console.log(`[${obj.friendlyName}]: Volume set`);
+
+                // Notify YouTube that we have stopped
+                obj.notifyVolumeChanged();
+            }
+        });
     }
 
     async getPosition() {
