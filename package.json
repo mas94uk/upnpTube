@@ -1,0 +1,25 @@
+{
+  "name": "upnpTube",
+  "version": 0.1,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mas94uk/upnpTube"
+  },
+  "description": "Cast from YouTube app (e.g. on Android) to dlna/upnp stereos, speakers, amplifiers etc.",
+  "author": "Mark Smith",
+  "main": "index.js",
+  "dependencies": {
+    "http-proxy": "^1.18.1",
+    "node-ssdp": "^4.0.1",
+    "upnp-mediarenderer-client": "^1.4.0",
+    "yt-cast-receiver": "git+https://git@github.com/mas94uk/yt-cast-receiver.git"
+  },
+  "keywords": ["youtube", "dlna", "upnp", "cast", "audio", "music"],
+  "homepage": "https://github.com/mas94uk/upnpTube",
+  "bugs": {
+    "url": "https://github.com/mas94uk/upnpTube/issues"
+  },
+  "bin": {
+    "upnpTube": "./index.js"
+  }
+}

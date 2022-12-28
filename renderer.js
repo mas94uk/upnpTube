@@ -5,13 +5,15 @@ const os = require('os');
 const httpProxy = require('http-proxy');
 
 // TODO: Ideally the author will accept the pull request and re-publish. Otherwise tie it to my fork.
-const Ytcr = require('../yt-cast-receiver_mas94');
+const Ytcr = require('yt-cast-receiver');
 
 // Use ports 3000, 3001, 3002 etc for successive YTCRs
 const YTCR_BASE_PORT = 3000;
 
 // Use port 800n for the HTTPS->HTTP proxying of the media
 const PROXY_BASE_PORT = 8000;
+
+// TODO Does this clean up nicely? YTCR instance disappear from the menu in the youtube app? Port freed etc?
 
 /**
  * Class controlling a single upnp media renderer.
@@ -50,44 +52,28 @@ class Renderer extends Ytcr.Player {
             const friendlyName = description.friendlyName;
             const manufacturer = description.manufacturer;
             const modelName = description.modelName;
-            obj.friendlyName = friendlyName + " (" + manufacturer + " " + modelName + ")";
+            obj.friendlyName = `🔊 ${friendlyName} (${manufacturer} ${modelName})`;
             console.log(`[${obj.friendlyName}]: New renderer created`);
+
+            // TODO Select audio or video according to the capabilities of the renderer
+            // obj.client.getSupportedProtocols( function(error, protocols) {
+            //     if(err) {
+            //         console.log(`[${obj.friendlyName}]: getSupportedProtocols error:`);
+            //         console.log(err);
+            //     } else {
+            //         console.log(`[${obj.friendlyName}]: getSupportedProtocols:`);
+            //         console.log(protocols);
+            //     }
+            // });
 
             // Create a youtube cast receiver
             const options = {port: YTCR_BASE_PORT + obj.index,
                              friendlyName: obj.friendlyName,
-                             manufacturer: obj.manufacturer,
-                             modelName: obj.modelName}; 
+                             manufacturer: description.manufacturer,
+                             modelName: description.modelName}; 
             obj.ytcr = Ytcr.instance(obj, options);
             obj.ytcr.start();
         });
-        
-        // // Listen for status updates from the renderer
-        // this.client.on('status', function(status) {
-        //     console.log(`[${obj.friendlyName}]: Status:`);
-        //     console.log(status);
-        // });
-
-        // this.client.on('loading', function() {
-        //     console.log(`[${obj.friendlyName}]: Loading`);
-        // });
-
-        // this.client.on('playing', function() {
-        //     console.log(`[${obj.friendlyName}]: Playing`);
-        // });
-
-        // this.client.on('paused', function() {
-        //     console.log(`[${obj.friendlyName}]: Paused`);
-
-        // });
-
-        // // If the client stops of its own accord ()
-        // this.client.on('stopped', function() {
-        //     console.log(`[${obj.friendlyName}]: Stopped`);
-
-        //     // Notify YouTube that we have stopped
-        //     obj.notifyStopped();
-        // });
     }
 
     refresh() {
