@@ -1,9 +1,8 @@
 const { Console } = require('console');
 const MediaRendererClient = require('upnp-mediarenderer-client');
 const { exec } = require('child_process');
-const http = require('http');
-const request = require('request');
 const os = require('os');
+const httpProxy = require('http-proxy');
 
 // TODO: Ideally the author will accept the pull request and re-publish. Otherwise tie it to my fork.
 const Ytcr = require('../yt-cast-receiver_mas94');
@@ -61,7 +60,34 @@ class Renderer extends Ytcr.Player {
                              modelName: obj.modelName}; 
             obj.ytcr = Ytcr.instance(obj, options);
             obj.ytcr.start();
-        })
+        });
+        
+        // // Listen for status updates from the renderer
+        // this.client.on('status', function(status) {
+        //     console.log(`[${obj.friendlyName}]: Status:`);
+        //     console.log(status);
+        // });
+
+        // this.client.on('loading', function() {
+        //     console.log(`[${obj.friendlyName}]: Loading`);
+        // });
+
+        // this.client.on('playing', function() {
+        //     console.log(`[${obj.friendlyName}]: Playing`);
+        // });
+
+        // this.client.on('paused', function() {
+        //     console.log(`[${obj.friendlyName}]: Paused`);
+
+        // });
+
+        // // If the client stops of its own accord ()
+        // this.client.on('stopped', function() {
+        //     console.log(`[${obj.friendlyName}]: Stopped`);
+
+        //     // Notify YouTube that we have stopped
+        //     obj.notifyStopped();
+        // });
     }
 
     refresh() {
@@ -98,26 +124,34 @@ class Renderer extends Ytcr.Player {
             } else {
                 const audioUrl = stdout.toString().trim();
                 console.log(`[${obj.friendlyName}]: Media URL: ${audioUrl}`);
-        
-                // Stop the old http server, if there was one
-                if(obj.httpServer) {
-                    obj.httpServer.close();
+                const url = new URL(audioUrl);
+
+                // Stop the existing proxy (if there is one)
+                if(obj.proxy) {
+                    obj.proxy.close();
                 }
-        
-                // Create an HTTP server which will proxy the media, which will (likely) be HTTPS
-                obj.httpServer = http.createServer(function (req, res) {
-                    console.log(`[${obj.friendlyName}]: HTTP connection received from ${req.socket.remoteAddress}`);
-                    req.pipe(request(audioUrl)).pipe(res);
-                });
-                const hostname = os.hostname();
+
+                // Create an HTTP -> HTTPS proxy, allowing the renderer to retrieve the file over HTTP
                 const proxyPort = PROXY_BASE_PORT + obj.index;
-                obj.httpServer.listen(proxyPort);
-                const localUrl = `http://${hostname}:${proxyPort}`;
-        
+                const proxyOptions = {
+                    target: {
+                        protocol: url.protocol,
+                        host: url.host,
+                        port: url.port || 443
+                    },
+                    changeOrigin: true
+                };
+                obj.proxy = httpProxy.createProxyServer(proxyOptions);
+                obj.proxy.listen(proxyPort);
+                
+                // Create a URL to give to the renderer with the same path and params, but starting http://our-hostname:port
+                const hostname = os.hostname();
+                const rendererUrl = `http://${hostname}:${proxyPort}/${url.pathname}${url.search}`;
+
                 // Load and play the URL on the renderer
                 const options = { autoplay: true,
                                   contentType: 'audio/mp4' };
-                obj.client.load(localUrl, options, function(err, result) {
+                obj.client.load(rendererUrl, options, function(err, result) {
                     if(err) {
                         console.log(`[${obj.friendlyName}]: Error loading media:`)
                         console.log(err);
@@ -196,7 +230,7 @@ class Renderer extends Ytcr.Player {
             } else {
                 console.log(`[${obj.friendlyName}]: Seeked`);
 
-                // Notify YouTube that we have stopped
+                // Notify YouTube that we have seeked
                 obj.notifySeeked(statusBeforeSeek);
             }
         });
@@ -281,7 +315,6 @@ class Renderer extends Ytcr.Player {
 
         return promise;
     }
-
 }
 
 // TODO Work out how to export only the things we want to export
