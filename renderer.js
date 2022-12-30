@@ -92,6 +92,51 @@ class Renderer extends Ytcr.Player {
         return false;
     }
 
+    getAudioUrl(videoId, callback) {
+        const obj = this;
+
+        // Call yt-dlp to get the audio URL
+        exec(`yt-dlp -f bestaudio[ext=m4a] --get-url ${videoId}`, function(err, stdout, stderr) {
+            if(err) {
+                console.log(`[${obj.friendlyName}]: Unable to get audio URL using yt-dlp. Using youtube-dl but this is slower!`);
+
+                // Enable to see what went wrong
+                // console.log(err);
+                // if(stdout) {
+                //     console.log(stdout);
+                // }
+                // if(stderr) {
+                //     console.log(stderr);
+                // }
+
+                exec(`youtube-dl -f bestaudio[ext=m4a] --get-url ${videoId}`, function(err, stdout, stderr) {
+                    if(err) {
+                        console.log(`[${obj.friendlyName}]: Error getting URL from youtube-dl:`);
+                        // Enable to see what went wrong
+                        // console.log(err);
+                        // if(stdout) {
+                        //     console.log(stdout);
+                        // }
+                        // if(stderr) {
+                        //     console.log(stderr);
+                        // }
+                    } else {
+                        // Call the callback with the retrieved URL
+                        const audioUrl = stdout.toString().trim();
+                        console.log(`[${obj.friendlyName}]: Media URL: ${audioUrl}`);
+                        callback(audioUrl);
+                    }
+                });
+            }
+            else {
+                // Call the callback with the retrieved URL
+                const audioUrl = stdout.toString().trim();
+                console.log(`[${obj.friendlyName}]: Media URL: ${audioUrl}`);
+                callback(audioUrl);
+            }
+        });
+    }
+
     /**
      * The methods implementing yt-cast-receiver.Player
      */
@@ -99,54 +144,43 @@ class Renderer extends Ytcr.Player {
         console.log(`[${this.friendlyName}]: Play ${videoId} at position ${position}s`);
         const obj = this;
 
-        // Call youtube-dl to get the audio URL
-        const stdout = exec(`youtube-dl -f bestaudio[ext=m4a] --get-url ${videoId}`, function(err, stdout, stderr) {
-            if(err) {
-                console.log(`[${obj.friendlyName}]: Error getting URL from youtube-dl:`);
-                console.log(err);
-                if(stdout) {
-                    console.log(stdout);
-                }
-            } else {
-                const audioUrl = stdout.toString().trim();
-                console.log(`[${obj.friendlyName}]: Media URL: ${audioUrl}`);
-                const url = new URL(audioUrl);
+        this.getAudioUrl(videoId, function(audioUrl) {
+            const url = new URL(audioUrl);
 
-                // Stop the existing proxy (if there is one)
-                if(obj.proxy) {
-                    obj.proxy.close();
-                }
-
-                // Create an HTTP -> HTTPS proxy, allowing the renderer to retrieve the file over HTTP
-                const proxyPort = PROXY_BASE_PORT + obj.index;
-                const proxyOptions = {
-                    target: {
-                        protocol: url.protocol,
-                        host: url.host,
-                        port: url.port || 443
-                    },
-                    changeOrigin: true
-                };
-                obj.proxy = httpProxy.createProxyServer(proxyOptions);
-                obj.proxy.listen(proxyPort);
-                
-                // Create a URL to give to the renderer with the same path and params, but starting http://our-hostname:port
-                const hostname = os.hostname();
-                const rendererUrl = `http://${hostname}:${proxyPort}/${url.pathname}${url.search}`;
-
-                // Load and play the URL on the renderer
-                const options = { autoplay: true,
-                                  contentType: 'audio/mp4' };
-                obj.client.load(rendererUrl, options, function(err, result) {
-                    if(err) {
-                        console.log(`[${obj.friendlyName}]: Error loading media:`)
-                        console.log(err);
-                    }
-                    else {
-                        obj.notifyPlayed();
-                    }
-                });
+            // Stop the existing proxy (if there is one)
+            if(obj.proxy) {
+                obj.proxy.close();
             }
+
+            // Create an HTTP -> HTTPS proxy, allowing the renderer to retrieve the file over HTTP
+            const proxyPort = PROXY_BASE_PORT + obj.index;
+            const proxyOptions = {
+                target: {
+                    protocol: url.protocol,
+                    host: url.host,
+                    port: url.port || 443
+                },
+                changeOrigin: true
+            };
+            obj.proxy = httpProxy.createProxyServer(proxyOptions);
+            obj.proxy.listen(proxyPort);
+
+            // Create a URL to give to the renderer with the same path and params, but starting http://our-hostname:port
+            const hostname = os.hostname();
+            const rendererUrl = `http://${hostname}:${proxyPort}/${url.pathname}${url.search}`;
+
+            // Load and play the URL on the renderer
+            const options = { autoplay: true,
+                                contentType: 'audio/mp4' };
+            obj.client.load(rendererUrl, options, function(err, result) {
+                if(err) {
+                    console.log(`[${obj.friendlyName}]: Error loading media:`)
+                    console.log(err);
+                }
+                else {
+                    obj.notifyPlayed();
+                }
+            });
         });
     }
 
