@@ -1,25 +1,33 @@
 {
-  "name": "upnpTube",
-  "version": 0.1,
+  "name": "upnptube",
+  "version": "0.0.1",
+  "description": "Cast from YouTube app to DLNA/UPNP renderers",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/mas94uk/upnpTube"
+    "url": "git+https://github.com/mas94uk/upnpTube.git"
   },
-  "description": "Cast from YouTube app (e.g. on Android) to dlna/upnp stereos, speakers, amplifiers etc.",
+  "keywords": [
+    "youtube",
+    "dlna",
+    "upnp",
+    "cast",
+    "audio",
+    "music"
+  ],
   "author": "Mark Smith",
-  "main": "index.js",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mas94uk/upnpTube/issues"
+  },
+  "homepage": "https://github.com/mas94uk/upnpTube#readme",
   "dependencies": {
     "http-proxy": "^1.18.1",
     "node-ssdp": "^4.0.1",
     "upnp-mediarenderer-client": "^1.4.0",
     "yt-cast-receiver": "git+https://git@github.com/mas94uk/yt-cast-receiver.git"
-  },
-  "keywords": ["youtube", "dlna", "upnp", "cast", "audio", "music"],
-  "homepage": "https://github.com/mas94uk/upnpTube",
-  "bugs": {
-    "url": "https://github.com/mas94uk/upnpTube/issues"
-  },
-  "bin": {
-    "upnpTube": "./index.js"
   }
 }
