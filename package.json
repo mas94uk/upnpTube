@@ -29,5 +29,8 @@
     "node-ssdp": "^4.0.1",
     "upnp-mediarenderer-client": "^1.4.0",
     "yt-cast-receiver": "git+https://git@github.com/mas94uk/yt-cast-receiver.git"
+  },
+  "bin": {
+    "upnpTube":"./index.js"
   }
 }
