@@ -20,9 +20,8 @@ const PROXY_BASE_PORT = 8000;
  * It implements yt-cast-receiver.Player so that it can receive and translate casts from YouTube.
  */
 class Renderer extends Ytcr.Player {
-    STALE_TIMEOUT = 300;  // A upnp renderer which has not been seen for 300s is considered to have disappeared
 
-    constructor(location, index)
+    constructor(location, index, timeout)
     {
         // Call the Ytcr.Player constructor
         super();
@@ -30,6 +29,7 @@ class Renderer extends Ytcr.Player {
         console.log("Creating new renderer: " + location);
         this.location = location;
         this.index = index;
+        this.timeout = timeout;
         this.httpServer = null;
         this.refresh();
 
@@ -53,7 +53,7 @@ class Renderer extends Ytcr.Player {
             const manufacturer = description.manufacturer;
             const modelName = description.modelName;
             obj.friendlyName = `🔊 ${friendlyName} (${manufacturer} ${modelName})`;
-            console.log(`[${obj.friendlyName}]: New renderer created`);
+            console.log(`[${obj.friendlyName}]: New renderer created, timeout ${obj.timeout}`);
 
             // TODO Select audio or video according to the capabilities of the renderer
             // obj.client.getSupportedProtocols( function(error, protocols) {
@@ -73,6 +73,12 @@ class Renderer extends Ytcr.Player {
                              modelName: description.modelName}; 
             obj.ytcr = Ytcr.instance(obj, options);
             obj.ytcr.start();
+
+            obj.ytcr.setDebug(true);
+            obj.ytcr.on('connected', client => {
+                console.log(`Connected to ${client.name}`);
+                console.log(`${client}`);
+            });
         });
     }
 
@@ -85,9 +91,9 @@ class Renderer extends Ytcr.Player {
         // If an error occurred in setup, we are stale. The program will delete us and recreate.e
         if (this.error) return true;
 
-        // If we have not been refreshed (i.e. discovered again) in STALE_TIMEOUT, we are stale.
+        // If we have not been refreshed (i.e. discovered again) in this.timeout, we are stale.
         const now = Number(process.hrtime.bigint()  / 1000000000n);
-        if (this.lastSeenTime + this.STALE_TIMEOUT < now) return true;
+        if (this.lastSeenTime + this.timeout < now) return true;
 
         return false;
     }

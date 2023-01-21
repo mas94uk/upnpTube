@@ -31,6 +31,6 @@
     "yt-cast-receiver": "git+https://git@github.com/mas94uk/yt-cast-receiver.git"
   },
   "bin": {
-    "upnpTube":"./index.js"
+    "upnpTube": "./index.js"
   }
 }
