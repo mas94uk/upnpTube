@@ -12,7 +12,7 @@ const Ssdp = require('./ssdp');
 const ssdp = new Ssdp.Ssdp();
 
 // The list of upnp renderers
-const renderers = []
+const renderers = new Map();
 var next_index = 0;
 
 // Handle SSDP responses
@@ -55,18 +55,16 @@ function add_or_update_renderer(values) {
         }
     }
 
-    // Look for an existing renderer with this location
-    for(let i=0 ; i<renderers.length ; ++i) {
-        const renderer = renderers[i];
-        if (renderer.location == location) {
-            renderer.refresh(timeout);
-            return;
-        }
-    }
+    const renderer = renderers.get(location);
+    if (renderer) {
+        // We have a renderer with this location, refresh it
+        renderer.refresh(timeout);
+    } else {
+        // We did not find a renderer with this location, so create one
+        const renderer = new Renderer(location, next_index++, timeout);
+        renderers.set(location, renderer);
 
-    // We did not find a renderer with this location, so create one
-    const renderer = new Renderer(location, next_index++, timeout);
-    renderers.push(renderer);
+    }
 }
 
 function remove_renderer(values) {
@@ -76,34 +74,20 @@ function remove_renderer(values) {
     // Get the location of the discovered renderer
     const location = values.LOCATION;
 
-    // Look for an existing renderer with this location, and remove it
-    for(let i=0 ; i<renderers.length ; ++i) {
-        const renderer = renderers[i];
-        if (renderer.location == location) {
-            console.log("Removing disappearing renderer: " + renderer.location);
-            renderers.splice(i, 1);
-            return;
-        }
+    // If we have an existing renderer with this location, remove it
+    const res = renderers.delete(location);
+    if(!res) {
+        console.log(`Byebye from unknown renderer: ${location}`)
     }
 }
 
 function pruneRenderers() {
-    var pruned = false;
-    do {
-        pruned = false;
-        for(let i=0 ; i<renderers.length ; ++i) {
-            const renderer = renderers[i];
-
-            if (renderer.isStale()) {
-                console.log("Removing stale renderer: " + renderer.location);
-                renderers.splice(i,i);
-                pruned = true;
-
-                // Only remove the first stale one because we have messed up the array indices.
-                break;
-            }
+    for(const [location, renderer] of renderers) {
+        if (renderer.isStale()) {
+            console.log("Removing stale renderer: " + renderer.location);
+            renderers.delete(location);
         }
-    } while (pruned);
+    }
 }
 
 function start_ssdp_discovery() {
