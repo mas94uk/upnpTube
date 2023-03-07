@@ -7,6 +7,8 @@ The YouTube app can be used to play, pause, stop and control the volume of the p
 
 
 ## Installation
+
+### Local installation
 Install npm and node.js:
 
     sudo apt install npm
@@ -26,6 +28,9 @@ Run it:
 
     upnpTube
     
+
+### Installation using Docker
+TODO: Write some instruction here
 
 ### How it works
 upnpTube scans for DLNA/UPNP renderers on your network. For each one it finds, it creates a YouTube Cast Receiver, named after the renderer.

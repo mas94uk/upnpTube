@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  upnpTube:
+    container_name: upnp-tube
+    image: mas94uk/upnp-tube
+    network_mode: 'host'
+    build:
+      context: './'  # folder containing the Dockerfile
+    volumes:
+      - '/etc/localtime:/etc/localtime:ro'  # I prefer doing it that way, don't judge
+    restart: unless-stopped
