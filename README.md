@@ -30,7 +30,14 @@ Run it:
     
 
 ### Installation using Docker
-TODO: Write some instruction here
+Clone this repository:
+
+    git clone git@github.com:mas94uk/upnpTube.git
+
+Create and start the Docker image:
+
+    cd upnpTube
+    docker-compose up [--detach]
 
 ### How it works
 upnpTube scans for DLNA/UPNP renderers on your network. For each one it finds, it creates a YouTube Cast Receiver, named after the renderer.
