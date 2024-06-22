@@ -1,0 +1,4 @@
+requests
+flask
+yt-dlp
+# Ajoutez d'autres dépendances nécessaires
