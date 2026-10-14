@@ -16,7 +16,7 @@ Install npm and node.js:
 Install upnpTube:
 
     mkdir upnpTube
-    cd upnoTube
+    cd upnpTube
     npm install https://github.com/mas94uk/upnpTube
     sudo npm link
     
